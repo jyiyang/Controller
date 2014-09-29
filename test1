@@ -1,0 +1,113 @@
+import math
+import csv
+
+#This is a test controller file for 3D motion 
+
+def Controller(currentState, desiredState):
+    #currentState = (0,0,0,0,0,0) #Static
+    T = 0 #Set initial time to 0
+    timeStep = 0.5 #Set time step 
+    final_T = 6000 #Set final time
+
+    #create the path for file
+    fileName = '/Users/JackYang/Desktop/Model.csv'
+    output_file = open(fileName, 'w')
+    datawriter = csv.writer(output_file)
+
+    data = [["Time", "Xpos","Ypos","Zpos", "Desired Position"]]
+
+    while T != final_T:
+        error = findError(currentState, desiredState)
+        force = determineForce(error, desiredState)
+        currentState = robot(currentState, force)
+        T += timeStep
+        data.append([T, getXpos(currentState), getYpos(currentState), getZpos(currentState), desiredState])
+
+    #write the data and close the file
+    datawriter.writerows(data)
+    output_file.close()
+    
+#########################################
+#####This part is for abstraction purpose 
+#########################################
+        
+def getXpos(State):
+    return State[0]
+
+def getYpos(State):
+    return State[1]
+
+def getZpos(State):
+    return State[2]
+
+def getXspeed(State):
+    return State[3]
+
+def getYspeed(State):
+    return State[4]
+
+def getZspeed(State):
+    return State[5]
+##########################################
+
+def findError(currentState, desiredState):
+    #This function finds the different between the desired state
+    #and the current state.
+    Xposerror = getXpos(desiredState) - getXpos(currentState)
+    Yposerror = getYpos(desiredState) - getYpos(currentState)
+    Zposerror = getZpos(desiredState) - getZpos(currentState)
+    
+    Xverror = getXspeed(desiredState) - getXspeed(currentState)
+    Yverror = getYspeed(desiredState) - getYspeed(currentState)
+    Zverror = getZspeed(desiredState) - getZspeed(currentState)
+    error = (Xposerror, Yposerror, Zposerror, Xverror, Yverror, Zverror)
+    return error
+
+def determineForce(error, desiredState):
+    #This function returns the force.
+    
+    #currentState = (x, y, z)
+    #desiredState = (x, y, z)
+    K_p = 0.0005 #Set proportional constant K_p
+    #Position error
+    Xposerror = error[0]
+    Yposerror = error[1]
+    Zposerror = error[2]
+    #velocity error
+    Xverror = error[3]
+    Yverror = error[4]
+    Zverror = error[5]
+    #use K_p to determine the force
+    Fx = K_p*Xposerror/abs(Xverror)
+    Fy = K_p*Yposerror/abs(Yverror)
+    Fz = K_p*Zposerror/abs(Zverror)
+    
+    return (Fx, Fy, Fz)
+
+def robot(currentState, force):
+    #This is a robot node for test purpose.
+    #It takes in currentState and force, and returns its next state
+    mass = 0.19
+    timeStep = 0.5
+    
+    xpos = getXpos(currentState)
+    ypos = getYpos(currentState)
+    zpos = getZpos(currentState)
+    
+    xv = getXspeed(currentState)
+    yv = getYspeed(currentState)
+    zv = getZspeed(currentState)
+    
+    xa = force[0]/mass
+    ya = force[1]/mass
+    za = force[2]/mass
+    
+    newXv = xv + xa*timeStep
+    newYv = yv + ya*timeStep
+    newZv = zv + za*timeStep
+
+    newXpos = xpos + xv + 0.5*xa*timeStep**2
+    newYpos = ypos + yv + 0.5*ya*timeStep**2
+    newZpos = zpos + zv + 0.5*za*timeStep**2
+
+    return (newXpos, newYpos, newZpos, newXv, newYv, newZv)
